@@ -87,7 +87,7 @@ class IceHockeyTimerApp:
         else:
             self.elapsed_time = self.offset_seconds.get()
 
-        self.next_horn_time = ((self.elapsed_time // self.interval_seconds.get()) + 1) * self.interval_seconds.get()
+        self.calculate_next_horn_time(total_seconds)
         self.ten_min_horn_played = False
         threading.Thread(target=self.run_timer).start()
 
@@ -115,7 +115,10 @@ class IceHockeyTimerApp:
                 self.ten_min_horn_played = True
 
             # Interval-based horns
-            if self.elapsed_time >= self.next_horn_time:
+            if self.clock_direction.get() == "down" and self.elapsed_time <= self.next_horn_time and self.elapsed_time > 0:
+                self.play_horn_sound()
+                self.next_horn_time -= interval
+            elif self.clock_direction.get() == "up" and self.elapsed_time >= self.next_horn_time and self.elapsed_time < total_seconds:
                 self.play_horn_sound()
                 self.next_horn_time += interval
 
@@ -131,7 +134,7 @@ class IceHockeyTimerApp:
             text=f"{minutes:02}:{seconds:02}/{total_minutes:02}:{total_secs:02}"
         )
 
-        if self.next_horn_time > total_seconds:
+        if (self.clock_direction.get() == "down" and self.next_horn_time < 0) or (self.clock_direction.get() == "up" and self.next_horn_time >= total_seconds):
             self.next_horn_label.config(text="Next Horn Sound at: --:--")
         else:
             next_minutes, next_seconds = divmod(self.next_horn_time, 60)
@@ -150,8 +153,15 @@ class IceHockeyTimerApp:
             self.elapsed_time = total_seconds - self.offset_seconds.get()
         else:
             self.elapsed_time = self.offset_seconds.get()
-        self.next_horn_time = ((self.elapsed_time // self.interval_seconds.get()) + 1) * self.interval_seconds.get()
+        self.calculate_next_horn_time(total_seconds)
         self.update_display(total_seconds)
+
+    def calculate_next_horn_time(self, total_seconds):
+        interval = self.interval_seconds.get()
+        if self.clock_direction.get() == "down":
+            self.next_horn_time = total_seconds - ((total_seconds - self.elapsed_time + interval - 1) // interval) * interval
+        else:
+            self.next_horn_time = ((self.elapsed_time // interval) + 1) * interval
 
 if __name__ == "__main__":
     root = tk.Tk()
